@@ -3,26 +3,44 @@
 namespace App\GraphQL\Resolvers;
 
 use App\Models\User;
+use GraphQL\Type\Definition\ResolveInfo;
+use Nuwave\Lighthouse\Support\Contracts\GraphQLContext;
 
 class UserStatisticsResolver
 {
-    public function __invoke(User $user)
+    /**
+     * @param $rootValue
+     * @param  array  $args
+     * @param  GraphQLContext|null  $context
+     * @param  ResolveInfo  $resolveInfo
+     * @return array
+     */
+    public function __invoke(User $user, array $args, GraphQLContext $context = null, ResolveInfo $resolveInfo)
     {
-        // Отримуємо всі статті користувача
-        $posts = $user->posts;
+        $requestedFields = $resolveInfo->getFieldSelection();
 
-        // Обчислюємо кількість статей
-        $totalPosts = $posts->count();
+        $totalPosts = $user->posts()->count();
 
-        // Обчислюємо середню довжину статей (якщо є статті)
-        $averageLength = $totalPosts > 0
-            ? $posts->avg(fn($post) => str_word_count($post->content))
-            : 0;
+        $totalWords = 0;
+        if (isset($requestedFields['average_post_length'])) {
+            $user->posts()->select('content')->chunk(100, function ($posts) use (&$totalWords) {
+                foreach ($posts as $post) {
+                    $totalWords += str_word_count($post->content);
+                }
+            });
+        }
 
-        // Повертаємо дані у форматі GraphQL-типу
+        $averageLength = $totalPosts > 0 ? $totalWords / $totalPosts : 0;
+
+        $totalComments = 0;
+        if (isset($requestedFields['total_comments'])) {
+            $totalComments = $user->comments()->count();
+        }
+
         return [
             'total_posts' => $totalPosts,
-            'average_post_length' => round($averageLength, 2),
+            'average_post_length' => $averageLength,
+            'total_comments' => $totalComments,
         ];
     }
 }
