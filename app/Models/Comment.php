@@ -13,11 +13,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $id
  * @property int $post_id
  * @property int $reply_to
- * @property string $title
  * @property Carbon $updated_at
  * @property int $user_id
  * 
- * @property-read PComment $parent
+ * @property-read Comment $parent
  * @property-read Post $post
  * @property-read User $user
  * @property-read Collection<int, Post> $posts
