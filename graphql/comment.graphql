@@ -1,0 +1,66 @@
+input CreateCommentInput {
+    post_id: ID! @rules(apply: ["exists:posts,id"])
+    content: String! @rules(apply: ["min:2"])
+    reply_to: ID @rules(apply: ["nullable", "exists:comments,id"])
+}
+
+input UpdateCommentInput {
+    content: String! @rules(apply: ["min:2"])
+}
+
+extend type Query {
+    "Find a single comment by ID."
+    comment(id: ID! @whereKey): Comment!
+        @find
+        @guard(with: ["api"])
+        @canFind(ability: "view", find: "id")
+
+    "List multiple comments."
+    comments(
+        "Filters by content."
+        content: String @where(operator: "like")
+
+        "Filters by user."
+        user: ID @where(key: "user_id")
+
+        "Filters by post."
+        post: ID @where(key: "post_id")
+    ): [Comment!]!
+        @guard(with: ["api"])
+        @canModel(ability: "viewAny")
+        @paginate(type: "PAGINATOR")
+}
+
+extend type Mutation {
+    createComment(input: CreateCommentInput! @spread): Comment!
+        # @create
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\CreateCommentResolver"
+        )
+        @guard(with: ["api"])
+        @canModel(ability: "create")
+
+    updateComment(
+        id: ID! @whereKey
+        input: UpdateCommentInput! @spread
+    ): Comment!
+        @update
+        @guard(with: ["api"])
+        @canFind(ability: "update", find: "id")
+
+    deleteComment(id: ID! @whereKey): Comment!
+        @delete
+        @guard(with: ["api"])
+        @canFind(ability: "delete", find: "id")
+}
+
+type Comment {
+    id: ID!
+    content: String!
+    user: User! @belongsTo
+    post: Post! @belongsTo
+    parent: Comment @belongsTo
+    replies: [Comment!]! @hasMany
+    created_at: DateTime!
+    updated_at: DateTime!
+}

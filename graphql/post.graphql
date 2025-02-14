@@ -1,11 +1,69 @@
 input CreatePostInput {
-    title: String! @rules(apply: ["min:3"])
-    content: String! @rules(apply: ["min:3"])
+    title: String! @rules(apply: ["min:2"])
+    content: String! @rules(apply: ["min:10"])
 }
 
-input UpdatePostInput @validator {
-    title: String
-    content: String
+input UpdatePostInput {
+    title: String @rules(apply: ["min:2", "required_without:content"])
+    content: String @rules(apply: ["min:10", "required_without:title"])
+}
+
+input PostTagsInput {
+    tag_ids: [ID!]! @rules(apply: ["array", "exists:tags,id"])
+}
+
+extend type Query {
+    "Find a single post by id."
+    post(id: ID! @whereKey): Post!
+        @find
+        @guard(with: ["api"])
+        @canFind(ability: "view", find: "id")
+
+    "List multiple posts."
+    posts(
+        "Filters by title."
+        title: String @where(operator: "like")
+
+        "Filters by content."
+        content: String @where(operator: "like")
+    ): [Post!]!
+        @guard(with: ["api"])
+        @canModel(ability: "viewAny")
+        @paginate(type: "PAGINATOR")
+    # @all
+}
+
+extend type Mutation {
+    createPost(input: CreatePostInput! @spread): Post!
+        @create
+        @guard(with: ["api"])
+        @canModel(ability: "create")
+
+    updatePost(id: ID! @whereKey, input: UpdatePostInput! @spread): Post!
+        @update
+        @guard(with: ["api"])
+        @canFind(ability: "update", find: "id")
+
+    deletePost(id: ID! @whereKey): Post!
+        @delete
+        @guard(with: ["api"])
+        @canFind(ability: "delete", find: "id")
+
+    "Add tags to a post"
+    addTagsToPost(id: ID! @whereKey, input: PostTagsInput! @spread): Post!
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\PostTagsResolver@addTagsToPost"
+        )
+        @guard(with: ["api"])
+        @canFind(ability: "update", find: "id")
+
+    "Remove tags from a post"
+    removeTagsFromPost(id: ID! @whereKey, input: PostTagsInput! @spread): Post!
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\PostTagsResolver@removeTagsFromPost"
+        )
+        @guard(with: ["api"])
+        @canFind(ability: "update", find: "id")
 }
 
 type Post {
@@ -13,19 +71,12 @@ type Post {
     title: String!
     content: String!
     user: User! @belongsTo
+    comments: [Comment!]!
+        @field(resolver: "App\\GraphQL\\Resolvers\\PostCommentsResolver")
+    tags: [Tag!]! @belongsToMany
     created_at: DateTime!
     updated_at: DateTime!
 }
 
-extend type Query {
-    post(id: ID!): Post @find
-    posts: [Post!]! @all
-}
-
-extend type Mutation {
-    createPost(input: CreatePostInput): Post @create
-
-    updatePost(id: ID! @whereKey, input: UpdatePostInput @spread): Post @update
-
-    deletePost(id: ID! @whereKey): Post @delete
-}
+#import comment.graphql
+#import tag.graphql

@@ -1,0 +1,35 @@
+input CreateTagInput {
+    name: String! @rules(apply: ["min:2"])
+}
+
+extend type Query {
+    "Find a single tag by ID or name."
+    tag(id: ID @whereKey): Tag!
+        @find
+        @guard(with: ["api"])
+        @canFind(ability: "view", find: "id")
+
+    "List multiple tags."
+    tags("Filters by name." name: String @where(operator: "like")): [Tag!]!
+        @all
+        @guard(with: ["api"])
+        @canModel(ability: "viewAny")
+}
+
+extend type Mutation {
+    createTag(input: CreateTagInput! @spread): Tag!
+        @create
+        @guard(with: ["api"])
+        @canModel(ability: "create")
+
+    deleteTag(id: ID @whereKey): Tag!
+        @delete
+        @guard(with: ["api"])
+        @canFind(ability: "delete", find: "id")
+}
+
+type Tag {
+    id: ID!
+    name: String!
+    posts: [Post!]! @belongsToMany
+}
