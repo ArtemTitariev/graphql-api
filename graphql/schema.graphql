@@ -16,8 +16,7 @@ type Query {
         email: String
             @eq
             @rules(apply: ["prohibits:id", "required_without:id", "email"])
-    ): User @find @guard(with: ["api"])
-    @canFind(ability: "view", find: "id")
+    ): User @find @guard(with: ["api"]) @canFind(ability: "view", find: "id")
 
     "List multiple users."
     users(
@@ -114,3 +113,4 @@ type UserStatistics {
 }
 
 #import post.graphql
+#import statistics.graphql

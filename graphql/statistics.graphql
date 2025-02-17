@@ -1,0 +1,37 @@
+input LimitInput {
+    limit: Int = 10 @rules(apply: ["int", "min:1", "max:100"])
+}
+
+extend type Query {
+    "Top users by the number of posts"
+    topContributorsByPosts(input: LimitInput @spread): [User!]!
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\Statistics\\TopContributorsByPostsResolver"
+        )
+        @guard(with: ["api"])
+
+    "Top users by the number of comments"
+    topContributorsByComments(input: LimitInput @spread): [User!]!
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\Statistics\\TopContributorsByCommentsResolver"
+        )
+        @guard(with: ["api"])
+
+    "Find similar users based on post tags"
+    similarUsers(input: LimitInput @spread): [User!]!
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\Statistics\\SimilarUsersResolver"
+        )
+        @guard(with: ["api"])
+
+    "Most discussed posts, with optional tag filtering"
+    mostDiscussedPosts(
+        userId: ID
+        tagIds: [ID!]
+        input: LimitInput @spread
+    ): [Post!]!
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\Statistics\\MostDiscussedPostsResolver"
+        )
+        @guard(with: ["api"])
+}
